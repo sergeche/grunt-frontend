@@ -1,6 +1,6 @@
 "use strict";
 
-exports = function(grunt) {
+module.exports = function(grunt) {
 	var cssModule = require('../lib/css');
 	var crypto = require('crypto');
 	var path = require('path');
@@ -128,10 +128,13 @@ exports = function(grunt) {
 		return shouldCompile;
 	}
 
-	function compileCSSTask(ctx) {
-		grunt.log.writeln('Compiling CSS');
-		var data = ctx.data;
-		var config = getConfig(ctx);
+	/** 
+	 * Register reusable CSS compiler helper
+	 * @param {Object} data Task payload
+	 * @param {Object} config Task config (can be obtained from getConfig() method)
+	 * @param {Object} catalog Pointer resources to catalog (can be obtained fron loadCatalog())
+	 */
+	grunt.registerHelper('frontend-css', function(data, config, catalog) {
 		if (!('src' in data)) {
 			return grunt.fail('No "src" property specified for "css" task');
 		}
@@ -140,7 +143,7 @@ exports = function(grunt) {
 			return grunt.fail('No "dest" property specified for "css" task');
 		}
 
-		var catalog = loadCatalog();
+		catalog = catalog || {};
 		var force = config.force;
 
 		var srcDir =  makeAbsPath(data.src);
@@ -183,16 +186,13 @@ exports = function(grunt) {
 			}
 		});
 
-		// update catalog
-		saveCatalog(catalog);
-	}
+		return catalog;
+	});
 
-	function compileJSTask(ctx) {
-		grunt.log.writeln('Compiling JS');
-		var config = getConfig(ctx);
-		var catalog = loadCatalog();
+	grunt.registerHelper('frontend-js', function(data, config, catalog) {
+		catalog = catalog || {};
 
-		var failed = _.find(ctx.data, function(src, dest) {
+		var failed = _.find(data, function(src, dest) {
 			// a copy on "min" task
 			var files = grunt.file.expandFiles(src);
 			var absDestPath = makeAbsPath(dest, config.webroot);
@@ -223,7 +223,7 @@ exports = function(grunt) {
 			grunt.file.write(dest, min);
 
 			// Fail task if errors were logged.
-			if (ctx.errorCount) {
+			if (grunt.fail.errorcount) {
 				return true;
 			}
 
@@ -249,17 +249,18 @@ exports = function(grunt) {
 			return false;
 		}
 
-		// update catalog
-		saveCatalog(catalog);
-	}
+		return catalog;
+	});
 
 	grunt.registerMultiTask('frontend', 'Builds font-end part of your web-site: compiles CSS and JS files', function() {
-		if (this.target == 'css') {
-			return compileCSSTask(this);
+		grunt.log.writeln('Compiling ' + this.target.toUpperCase());
+
+		var catalog = grunt.helper('frontend-' + this.target, this.data, getConfig(this), loadCatalog());
+		if (catalog) {
+			// update catalog
+			return saveCatalog(catalog);
 		}
 
-		if (this.target == 'js') {
-			return compileJSTask(this);
-		}
+		return false;
 	});
 };
