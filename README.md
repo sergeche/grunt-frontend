@@ -25,7 +25,7 @@ module.exports = function(grunt) {
             // Destination root folder.
             // Used to update minified files paths in catalog,
             // e.g. instead of storing '/Users/foo/project/out/css/minified.css' path, 
-            // task will cut-out path to webroot store '/css/minified.css' instead
+            // task will cut-out path to webroot and store '/css/minified.css' instead
             webroot: './out'
         },
 
