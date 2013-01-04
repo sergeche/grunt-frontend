@@ -1,5 +1,9 @@
 "use strict";
 
+var fs = require('fs');
+var path = require('path');
+var csso = require('csso');
+
 module.exports = function(grunt) {
 	var cssModule = require('../lib/css');
 	var crypto = require('crypto');
@@ -128,11 +132,24 @@ module.exports = function(grunt) {
 		return shouldCompile;
 	}
 
+	/**
+	 * Check if passed path is a file
+	 * @param  {String}  path
+	 * @return {Boolean}
+	 */
+	function isFile(path) {
+		if (fs.existsSync(path)) {
+			return fs.statSync(path).isFile();
+		} else {
+			return (/\.\w+$/).test(path);
+		}
+	}
+
 	/** 
 	 * Register reusable CSS compiler helper
 	 * @param {Object} data Task payload
 	 * @param {Object} config Task config (can be obtained from getConfig() method)
-	 * @param {Object} catalog Pointer resources to catalog (can be obtained fron loadCatalog())
+	 * @param {Object} catalog Pointer resources to catalog (can be obtained from loadCatalog())
 	 */
 	grunt.registerHelper('frontend-css', function(data, config, catalog) {
 		if (!('src' in data)) {
@@ -144,13 +161,9 @@ module.exports = function(grunt) {
 		}
 
 		catalog = catalog || {};
-		var force = config.force;
 
 		var srcDir =  makeAbsPath(data.src);
 		var destDir = makeAbsPath(data.dest);
-		var webroot = config.webroot;
-
-		grunt.file.mkdir(destDir);
 
 		// read all css files
 		var reCSSFile = /\.css$/i;
@@ -158,32 +171,68 @@ module.exports = function(grunt) {
 		var resolver = createPathResolver(config.srcWebroot);
 		grunt.file.recurse(srcDir, function(abspath, rootdir, subdir, filename) {
 			if (reCSSFile.test(abspath) && !reSkip.test(filename)) {
-				var destFile = path.join(destDir, subdir, filename);
-				var catalogName = filePathForCatalog(destFile, webroot);
-				var srcCatalogName = filePathForCatalog(abspath, config.srcWebroot);
-
-				grunt.log.writeln('\nReading ' + filePathForCatalog(abspath, config.srcWebroot));
-				var imports = {};
-				var min = cssModule.compileCSSFile(abspath, resolver, imports);
-
-				// check if we should re-save compiled file
-				// thus change its content and modification date				
-				var hash = md5(min);
-				
-				if (!force && catalogName in catalog && catalog[catalogName].md5 === hash && fs.existsSync(destFile)) {
-					grunt.log.writeln('File is not modified, skipping');
-					return;
-				}
-
-				grunt.log.writeln('Saving minified version to ' + filePathForCatalog(destFile, webroot));
-				grunt.file.write(path.join(destDir, subdir, filename), min);
-
-				catalog[catalogName] = {
-					md5: hash,
-					date: timestamp(),
-					files: [srcCatalogName]
-				};
+				var payload = {};
+				payload[path.join(destDir, subdir, filename)] = abspath;
+				grunt.helper('frontend-css-file', payload, config, catalog);
 			}
+		});
+
+		return catalog;
+	});
+
+	/** 
+	 * Compiles single CSS file
+	 * @param {Object} data Task payload
+	 * @param {Object} config Task config (can be obtained from getConfig() method)
+	 * @param {Object} catalog Pointer resources to catalog (can be obtained from loadCatalog())
+	 */
+	grunt.registerHelper('frontend-css-file', function(data, config, catalog) {
+		catalog = catalog || {};
+
+		var resolver = createPathResolver(config.srcWebroot);
+
+		_.each(data, function(src, dest) {
+			var destFile = makeAbsPath(dest);
+			grunt.file.mkdir(path.dirname(destFile));
+
+			var imports = {};
+			var keepImports = [];
+			var srcCatalogFiles = [];
+
+			// sequentially inline all source CSS files into a singe one
+			var max = _.map(grunt.file.expandFiles(src), function(f) {
+				var srcFile = makeAbsPath(f);
+				srcCatalogFiles.push(filePathForCatalog(srcFile, config.srcWebroot));
+				grunt.log.writeln('\nReading ' + _.last(srcCatalogFiles));
+
+				return cssModule.inlineCSSFile(srcFile, resolver, keepImports, imports);
+			}).join('');
+
+			// create file header with @imports that should be kept
+			var header = _.map(keepImports, function(imp) {
+				return imp.value;
+			}).join(';\n') + '\n';
+
+			// minify CSS
+			var min = csso.justDoIt(header + max, true);
+
+			// check if we should re-save compiled file
+			// thus change its content and modification date				
+			var hash = md5(min);
+			var catalogName = filePathForCatalog(destFile, config.webroot);
+			if (!config.force && catalogName in catalog && catalog[catalogName].md5 === hash && fs.existsSync(destFile)) {
+				grunt.log.writeln('File is not modified, skipping');
+				return;
+			}
+
+			grunt.log.writeln('Saving minified version to ' + catalogName);
+			grunt.file.write(destFile, min);
+
+			catalog[catalogName] = {
+				md5: hash,
+				date: timestamp(),
+				files: srcCatalogFiles
+			};
 		});
 
 		return catalog;

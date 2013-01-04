@@ -43,6 +43,18 @@ exports.testGrunt = {
 		test.done();
 	},
 
+	cssSingle: function(test) {
+		var payload = {};
+		payload[pathResolver('out/css/single.css')] = pathResolver('css/test-utf.css');
+
+		var catalog = grunt.helper('frontend-css-file', payload, config);
+
+		test.ok(catalog, 'Single CSS compiled successfully');
+		test.ok('/css/single.css' in catalog, 'Has single.css');
+
+		test.done();	
+	},
+
 	js: function(test) {
 		var payload = {
 			'test/out/js/f.js': [
