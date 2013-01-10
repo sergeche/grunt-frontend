@@ -3,3 +3,4 @@ tmp
 
 /test/out/
 /.build-catalog.json
+/out/

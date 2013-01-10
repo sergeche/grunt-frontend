@@ -1,6 +1,5 @@
-"use strict";
-
 module.exports = function(grunt) {
+	"use strict";
 
 	// Project configuration.
 	grunt.initConfig({
@@ -16,20 +15,40 @@ module.exports = function(grunt) {
 		},
 		jshint: {
 			options: {
-				curly:   true,
-				eqeqeq:  false,
-				immed:   true,
-				latedef: true,
-				newcap:  true,
-				noarg:   true,
-				sub:     true,
-				undef:   true,
-				boss:    true,
-				eqnull:  true,
-				node:    true,
-				es5:     true
+				curly:     true,
+				eqeqeq:    false,
+				immed:     true,
+				latedef:   true,
+				newcap:    true,
+				noarg:     true,
+				sub:       true,
+				undef:     true,
+				boss:      true,
+				eqnull:    true,
+				node:      true,
+				es5:       true,
+				smarttabs: true
 			},
 			globals: {}
+		},
+
+		frontend: {
+			production: {
+				options: {
+					webroot: './out',
+					srcWebroot: './test'
+				},
+				css: {
+					src: 'test/css',
+					dest: 'out/css'
+				},
+				js: {
+					'out/js/f.js': [
+						'test/js/file1.js',
+						'test/js/file2.js'
+					]
+				}
+			}
 		}
 	});
 
@@ -38,5 +57,4 @@ module.exports = function(grunt) {
 
 	// Default task.
 	grunt.registerTask('default', 'lint test');
-	
 };

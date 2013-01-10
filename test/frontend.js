@@ -58,8 +58,8 @@ exports.testGrunt = {
 	js: function(test) {
 		var payload = {
 			'test/out/js/f.js': [
-				'js/file1.js',
-				'js/file2.js'
+				'test/js/file1.js',
+				'test/js/file2.js'
 			]
 		};
 		var catalog = grunt.helper('frontend-js', payload, config);

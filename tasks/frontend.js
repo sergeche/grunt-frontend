@@ -1,13 +1,10 @@
-"use strict";
-
-var fs = require('fs');
-var path = require('path');
-var csso = require('csso');
-
 module.exports = function(grunt) {
+	"use strict";
+
 	var cssModule = require('../lib/css');
 	var crypto = require('crypto');
 	var path = require('path');
+	var csso = require('csso');
 	var fs = require('fs');
 	var _ = require('underscore');
 
@@ -81,21 +78,38 @@ module.exports = function(grunt) {
 		return filePath;
 	}
 
-	function getConfig(ctx) {
-		var keyName = 'frontendConfig';
-		ctx.requiresConfig(keyName);
-		var config = grunt.config.get(keyName);
+	// function getConfig(ctx) {
+	// 	var keyName = 'frontendConfig';
+	// 	ctx.requiresConfig(keyName);
+	// 	var config = grunt.config.get(keyName);
+	// 	if (!config.webroot) {
+	// 		return grunt.fail.fatal('You shoud specify "webroot" property in "' + keyName + '" section', 100);
+	// 	}
+
+	// 	var force = false;
+	// 	if ('force' in config) {
+	// 		force = !!config.force;
+	// 	}
+
+	// 	if (ctx.args && ~ctx.args.indexOf('force')) {
+	// 		force = true;
+	// 	}
+
+	// 	return _.extend(config, {
+	// 		force: force,
+	// 		webroot: makeAbsPath(config.webroot),
+	// 		srcWebroot: makeAbsPath(config.srcWebroot || config.webroot)
+	// 	});
+	// }
+
+	function validateConfig(config) {
 		if (!config.webroot) {
-			return grunt.fail.fatal('You shoud specify "webroot" property in "' + keyName + '" section', 100);
+			return grunt.fail.fatal('You shoud specify "webroot" property in frontend config', 100);
 		}
 
 		var force = false;
 		if ('force' in config) {
 			force = !!config.force;
-		}
-
-		if (ctx.args && ~ctx.args.indexOf('force')) {
-			force = true;
 		}
 
 		return _.extend(config, {
@@ -245,6 +259,7 @@ module.exports = function(grunt) {
 			// a copy on "min" task
 			var files = grunt.file.expandFiles(src);
 			var absDestPath = makeAbsPath(dest, config.webroot);
+
 			var catalogName = filePathForCatalog(absDestPath, config.webroot);
 			grunt.log.writeln('\nReading ' + catalogName);
 
@@ -303,13 +318,17 @@ module.exports = function(grunt) {
 
 	grunt.registerMultiTask('frontend', 'Builds font-end part of your web-site: compiles CSS and JS files', function() {
 		grunt.log.writeln('Compiling ' + this.target.toUpperCase());
+		var data = this.data;
+		var catalog = loadCatalog();
+		var config = validateConfig(_.extend({}, grunt.config.get('frontendConfig') || {}, this.data.options || {}));
 
-		var catalog = grunt.helper('frontend-' + this.target, this.data, getConfig(this), loadCatalog());
-		if (catalog) {
-			// update catalog
-			return saveCatalog(catalog);
-		}
+		['css', 'css-single', 'js'].forEach(function(h) {
+			if (h in data) {
+				grunt.helper('frontend-' + h, data[h], config, catalog);
+			}
+		});
 
-		return false;
+		// update catalog
+		return saveCatalog(catalog);
 	});
 };
