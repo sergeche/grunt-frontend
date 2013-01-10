@@ -322,7 +322,7 @@ module.exports = function(grunt) {
 		var catalog = loadCatalog();
 		var config = validateConfig(_.extend({}, grunt.config.get('frontendConfig') || {}, this.data.options || {}));
 
-		['css', 'css-single', 'js'].forEach(function(h) {
+		['css', 'css-file', 'js'].forEach(function(h) {
 			if (h in data) {
 				grunt.helper('frontend-' + h, data[h], config, catalog);
 			}
