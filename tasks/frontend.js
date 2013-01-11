@@ -227,8 +227,16 @@ module.exports = function(grunt) {
 				return imp.value;
 			}).join(';\n') + '\n';
 
+			if (config.preProcess) {
+				max = config.preProcess(max, destFile);
+			}
+
 			// minify CSS
 			var min = csso.justDoIt(header + max, true);
+
+			if (config.postProcess) {
+				min = config.postProcess(min, destFile);
+			}
 
 			// check if we should re-save compiled file
 			// thus change its content and modification date				
@@ -282,8 +290,17 @@ module.exports = function(grunt) {
 			// linted) file, but it supports any number of files.
 			var max = grunt.helper('concat', files);
 
+			if (config.preProcess) {
+				max = config.preProcess(max, dest);
+			}
+
 			// Concat banner + minified source.
 			var min = banner + grunt.helper('uglify', max, grunt.config('uglify'));
+
+			if (config.postProcess) {
+				min = config.postProcess(min, dest);
+			}
+
 			grunt.file.write(dest, min);
 
 			// Fail task if errors were logged.
