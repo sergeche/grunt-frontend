@@ -1,5 +1,5 @@
 var csso = require('csso');
-var parser = require('../lib/parser');
+var parser = require('./parser');
 var _ = require('underscore');
 var fs = require('fs');
 var path = require('path');
@@ -34,7 +34,10 @@ function findImports(css) {
 				} else {
 					valueToken = findToken(urlToken, 'string');
 				}
-				if (!valueToken) return;
+				
+				if (!valueToken) {
+					return;
+				}
 
 				var ruleStart = token[0].f;
 				var ruleEnd = token[0].l;

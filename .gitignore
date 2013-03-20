@@ -4,3 +4,4 @@ tmp
 /test/out/
 /.build-catalog.json
 /out/
+.DS_Store
