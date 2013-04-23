@@ -22,7 +22,7 @@ exports.init = function(grunt) {
 
 	function timestamp() {
 		var now = new Date();
-		return [now.getFullYear(), 
+		return [now.getFullYear(),
 			padNumber(now.getMonth() + 1),
 			padNumber(now.getDate()),
 			padNumber(now.getHours()),
@@ -94,9 +94,9 @@ exports.init = function(grunt) {
 
 	/**
 	 * Returns file path for catalog entry
-	 * @param  {String} filePath 
-	 * @param  {String} webroot 
-	 * @return {String} 
+	 * @param  {String} filePath
+	 * @param  {String} webroot
+	 * @return {String}
 	 */
 	function filePathForCatalog(filePath, webroot) {
 		var len = webroot.length;
@@ -161,7 +161,7 @@ exports.init = function(grunt) {
 		grunt.file.recurse(srcDir, function(abspath, rootdir, subdir, filename) {
 			if (reCSSFile.test(abspath) && !reSkip.test(filename)) {
 				var payload = {};
-				payload[path.join(destDir, subdir, filename)] = abspath;
+				payload[path.join(destDir || '', subdir || '', filename || '')] = abspath;
 				exports.compileCSSFile(payload, config, catalog);
 			}
 		});
@@ -169,7 +169,7 @@ exports.init = function(grunt) {
 		return catalog;
 	};
 
-	/** 
+	/**
 	 * Compiles single CSS file
 	 * @param {Object} data Task payload
 	 * @param {Object} config Task config (can be obtained from getConfig() method)
@@ -214,7 +214,7 @@ exports.init = function(grunt) {
 			}
 
 			// check if we should re-save compiled file
-			// thus change its content and modification date				
+			// thus change its content and modification date
 			var hash = md5(min);
 			var catalogName = filePathForCatalog(destFile, config.webroot);
 			if (!config.force && catalogName in catalog && catalog[catalogName].md5 === hash && fs.existsSync(destFile)) {
