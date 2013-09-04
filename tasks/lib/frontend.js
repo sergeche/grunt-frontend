@@ -247,7 +247,7 @@ exports.init = function(grunt) {
 			mangle: {},
 			beautify: false,
 			report: false
-		}, data.options || {});
+		}, data.options || {}, config.uglify || {});
 
 		files.forEach(function(f) {
 			var src = f.src.filter(function(filepath) {
@@ -278,11 +278,6 @@ exports.init = function(grunt) {
 			}
 
 			grunt.file.write(f.dest, uglified.min);
-
-			// Fail task if errors were logged.
-			if (grunt.fail.errorcount) {
-				return failed = true;
-			}
 
 			// Otherwise, print a success message....
 			grunt.log.writeln('File "' + catalogName + '" created.');
