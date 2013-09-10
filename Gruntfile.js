@@ -11,7 +11,7 @@ module.exports = function(grunt) {
 			tasks: 'default'
 		},
 		jshint: {
-			files: ['grunt.js', 'tasks/**/*.js', '!tasks/lib/parser.js', 'test/*.js'],
+			files: ['Gruntfile.js', 'tasks/**/*.js', 'test/*.js'],
 			options: {
 				curly:     true,
 				eqeqeq:    false,
@@ -31,24 +31,42 @@ module.exports = function(grunt) {
 		},
 
 		frontend: {
-			production: {
-				options: {
-					webroot: './out',
-					srcWebroot: './test'
-				},
-				css: {
-					src: 'test/css',
-					dest: 'out/css'
-				},
-				js: {
-					files: {
-						'out/js/f.js': [
-							'test/js/file1.js',
-							'test/js/file2.js'
-						]
-					}
-					
+			webroot: './out',
+			srcWebroot: './test',
+			rewriteScheme: '/-/<%= version %><%= url %>',
+			force: true
+		},
+
+		'frontend-js': {
+			options: {
+				force: true
+			},
+			main: {
+				files: {
+					'out/js/f.js': [
+						'test/js/file1.js',
+						'test/js/file2.js'
+					]
 				}
+			}
+		},
+
+		'frontend-css': {
+			main: {
+				options: {
+					inline: true,
+					rewriteUrl: true,
+					minify: true
+				},
+				files: [
+					{src: 'test/css/*.css', dest: 'out/css'}
+				]
+			}
+		},
+
+		'frontend-index': {
+			main: {
+				files: [{src: 'test/css/**/*.css'}]
 			}
 		}
 	});

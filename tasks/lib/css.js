@@ -1,129 +1,132 @@
-var csso = require('csso');
-var parser = require('./parser');
-var _ = require('underscore');
-var fs = require('fs');
+var rework = require('rework');
 var path = require('path');
+var fs = require('fs');
+var inlineImports = require('./rework-inline-imports');
+var utils = require('./utils');
+var csso = require('csso');
 
-function isToken(token, type) {
-	return token instanceof Array && token[1] == type;
-}
+var hashLookup = {};
+var reIgnoredUrls = /^\w+\:/;
 
-function findToken(list, type) {
-	return _.find(list, function(item) {
-		return isToken(item, type);
-	});
-}
-
-/**
- * Finds all @imported files in CSS file and returns their paths and locations
- * inside CSS
- */
-function findImports(css) {
-	var tokens = parser.parse(css, 'stylesheet');
-	var imports = [];
-	tokens.forEach(function(token, i) {
-		if (isToken(token, 'atrules')) {
-			// is it @import rule?
-			var kw = findToken(token, 'atkeyword');
-			if (kw && kw[2][2].toLowerCase() == 'import') {
-				var valueToken;
-				var urlToken = findToken(token, 'uri');
-				
-				if (urlToken) {
-					valueToken = findToken(urlToken, 'raw') || findToken(urlToken, 'string');
-				} else {
-					valueToken = findToken(urlToken, 'string');
-				}
-				
-				if (!valueToken) {
-					return;
-				}
-
-				var ruleStart = token[0].f;
-				var ruleEnd = token[0].l;
-				if (css.charAt(ruleEnd) == ';') {
-					ruleEnd++;
-				}
-
-				imports.push({
-					file: valueToken[2].replace(/^['"]|['"]$/g, ''),
-					start: ruleStart,
-					end: ruleEnd,
-					value: css.substring(ruleStart, ruleEnd)
-				});
-			}
-		}
-	});
-
-	return imports;
-}
-
-/**
- * Compiles singe CSS file: concats all @imported file into singe one
- * @param {String} file Absolute path to CSS file
- * @param {Function} pathResolver Function that will resolve paths to imported file
- * @returns {String} Content of compiled file
- */
-function inlineCSSFile(file, pathResolver, keepImports, alreadyImported) {
-	keepImports = keepImports || [];
-	alreadyImported = alreadyImported || {};
-	alreadyImported[file] = true;
-
-	var originalFile = fs.readFileSync(file, 'utf8');
-	var imports = findImports(originalFile);
-	if (!imports.length) {
-		return originalFile;
+function lookupHash(file, config) {
+	if (!(path in hashLookup)) {
+		var f = utils.fileInfo(file, {cwd: config.srcWebroot});
+		hashLookup[file] = f.hash;
 	}
 
-	var replacements = [];
-	var reExternal = /^\w+\:\/\//;
-	imports.forEach(function(imp) {
-		var fullPath = pathResolver(imp.file, file);
-		var replaceValue = '';
+	return hashLookup[file];
+}
 
-		if (reExternal.test(imp.file)) {
-			keepImports.push(imp);
-		} else if (!(fullPath in alreadyImported)) {
-			alreadyImported[fullPath] = true;
-			try {
-				replaceValue = inlineCSSFile(fullPath, pathResolver, keepImports, alreadyImported);
-			} catch (e) {
-				throw 'Unable to read "' + imp.file + '" import in ' + file;
+function rewriteUrl(url, cssFile, config) {
+	if (reIgnoredUrls.test(url)) {
+		// do not touch external urls
+		return url;
+	}
+
+	if (config.ignoredUrls && config.ignoredUrls.test(url)) {
+		// ignore user-defined patterns
+		return url;
+	}
+
+	var parentDir = path.dirname(cssFile.absPath), absUrl;
+	if (url.charAt(0) == '/') {
+		absUrl = path.join(config.srcWebroot, url.substr(1));
+	} else {
+		absUrl = path.resolve(parentDir, url);
+	}
+
+	var f = utils.fileInfo(absUrl, {cwd: config.srcWebroot});
+	var version = lookupHash(f.absPath, config);
+
+	if (!version) {
+		return url;
+	}
+
+	return utils.versionedUrl(f.catalogPath, version, config);
+}
+
+module.exports = {
+	/**
+	 * Processes given CSS files
+	 * @param  {Array} files    Normalized Grunt task file list
+	 * @param  {Object} config  Current task config
+	 * @param  {Object} catalog Output catalog
+	 * @param  {Object} env     Task environment (`grunt` and `task` properties)
+	 * @return {Object}         Updated catalog
+	 */
+	compile: function(files, config, catalog, env) {
+		var grunt = env.grunt;
+		var that = this;
+
+		files.forEach(function(f) {
+			var destPath = f.dest;
+			if (grunt.file.isFile(destPath)) {
+				destPath = path.dirname(destPath);
 			}
-		}
 
-		replacements.push({
-			start: imp.start,
-			end: imp.end,
-			value: replaceValue
+			grunt.file.mkdir(destPath);
+
+			f.src.forEach(function(src) {
+				var file = that.processFile(src, config, catalog, env);
+				if (
+					!config.force 
+					&& file.catalogPath in catalog 
+					&& catalog[file.catalogPath].hash === file.hash 
+					&& fs.existsSync(file.absPath)) {
+						grunt.log.writeln('File is not modified, skipping');
+						return;
+				}
+
+				// save result
+				var outFile = utils.fileInfo(path.join(destPath, path.basename(file.absPath)), config);
+				grunt.log.writeln('Saving ' + outFile.catalogPath.cyan);
+				grunt.file.write(outFile.absPath, file.content);
+				catalog[outFile.catalogPath] = {
+					hash: file.hash,
+					date: utils.timestamp(),
+					versioned: utils.versionedUrl(outFile.catalogPath, file.hash, config)
+				};
+			});
 		});
-	});
+	},
 
-	// actually replace imports
-	while (replacements.length) {
-		var r = replacements.pop();
-		originalFile = originalFile.substring(0, r.start) + r.value + originalFile.substring(r.end);
+	processFile: function(file, config, catalog, env) {
+		if (typeof file == 'string') {
+			file = utils.fileInfo(file, {cwd: config.srcWebroot});
+		}
+
+		var grunt = env.grunt;
+		var imported = [];
+		var style = rework(inlineImports.read(file.absPath));
+
+		if (config.inline) {
+			grunt.verbose.writeln('Inlining ' + file.catalogPath.cyan);
+			style.use(inlineImports(config.srcWebroot, file.absPath, imported));
+		}
+
+		if (config.rewriteUrl) {
+			grunt.verbose.writeln('Rewriting URLs in ' + file.catalogPath.cyan);
+			// rewrite urls to external resources
+			style.use(rework.url(function(url) {
+				return rewriteUrl(url, file, config);
+			}));
+		}
+
+		var out = style.toString();
+
+		if (config.minify) {
+			// minify CSS
+			grunt.verbose.writeln('Minifying ' + file.catalogPath.cyan);
+			out = csso.justDoIt(out, true);
+		}
+
+		if (config.postProcess) {
+			// do additional postprocessing, if required
+			grunt.verbose.writeln('Postprocessing ' + file.catalogPath.cyan);
+			out = config.postProcess(out, file);
+		}
+
+		file.content = out;
+		return file;
 	}
-
-	return originalFile;
-}
-
-/**
- * Compiles singe CSS file: concats all @imported file into singe one
- * @param {String} file Absolute path to CSS file
- * @param {Function} pathResolver Function that will resolve paths to imported file
- * @returns {String} Content of compiled file
- */
-function compileCSSFile(file, pathResolver, alreadyImported) {
-	var keepImports = [];
-	var inlinedContent = inlineCSSFile(file, pathResolver, keepImports, alreadyImported);
-
-	var header = _.map(keepImports, function(imp) {
-		return imp.value;
-	}).join(';\n') + '\n';
-
-	return csso.justDoIt(header + inlinedContent, true);
-}
-
-exports.compileCSSFile = compileCSSFile;
-exports.inlineCSSFile = inlineCSSFile;
+};

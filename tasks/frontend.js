@@ -1,28 +1,49 @@
 module.exports = function(grunt) {
 	"use strict";
+	var js = require('./lib/javascript.js');
+	var css = require('./lib/css.js');
+	var utils = require('./lib/utils.js');
+	var catalog = require('./lib/catalog.js');
+	var readerConf = {encoding: null};
 
-	var frontend = require('./lib/frontend').init(grunt);
-	var _ = require('underscore');
+	function factory(fn) {
+		return function() {
+			var config = utils.config(grunt, this);
+			var map = catalog.load();
+			fn(config, map, {grunt: grunt, task: this});
+			catalog.save(map);
+		};
+	}
 
-	var taskMap = {
-		'css': 'compileCSS',
-		'css-file': 'compileCSSFile',
-		'js': 'compileJS'
-	};
+	grunt.registerMultiTask('frontend-js', 'Concatenates and minifies JS files and stores all meta info in build catalog', 
+		factory(function(config, map, env) {
+			js.compile(env.task.files, config, map, env);
+		})
+	);
 
-	grunt.registerMultiTask('frontend', 'Builds font-end part of your web-site: compiles CSS and JS files', function() {
-		grunt.log.writeln('Compiling ' + this.target.toUpperCase());
-		var data = this.data;
-		var catalog = frontend.loadCatalog();
-		var config = frontend.validateConfig(_.extend({}, grunt.config.get('frontendConfig') || {}, this.data.options || {}));
+	grunt.registerMultiTask('frontend-css', 'Concatenates and minifies CSS files and stores all meta info in build catalog', 
+		factory(function(config, map, env) {
+			css.compile(env.task.files, config, map, env);
+		})
+	);
 
-		_.keys(taskMap).forEach(function(h) {
-			if (h in data) {
-				frontend[taskMap[h]].call(frontend, data[h], config, catalog);
-			}
-		});
+	grunt.registerMultiTask('frontend-index', 'Indexes all given files and saves their meta-data in build catalog', 
+		factory(function(config, map, env) {
+			var add = function(file) {
+				file = utils.fileInfo(file, config);
 
-		// update catalog
-		return frontend.saveCatalog(catalog);
-	});
+				if (!(file.catalogPath in map)) {
+					map[file.catalogPath] = {};
+				}
+
+				var obj = map[file.catalogPath];
+				obj.hash = file.hash;
+				obj.versioned = file.versionedUrl(config);
+			};
+
+			env.task.files.forEach(function(f) {
+				f.src.forEach(add);
+			});
+		})
+	);
 };
