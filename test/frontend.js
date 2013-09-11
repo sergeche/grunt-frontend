@@ -1,77 +1,50 @@
 "use strict";
 
 var path = require('path');
-var csso = require('csso');
 var grunt = require('grunt');
-var compileCSSFile = require('../tasks/lib/css').compileCSSFile;
-var frontend = require('../tasks/lib/frontend').init(grunt);
-
-function pathResolver(file, originalFile) {
-	var dirname = originalFile ? path.dirname(originalFile) : __dirname;
-	if (file.charAt(0) == '/') {
-		// resolve absolute file include
-		file = file.replace(/^\/+/, '');
-		dirname = __dirname;
-	}
-	return path.resolve(dirname, file);
-}
-
-exports.cssCompiler = function(test) {
-	var compiledCSS = compileCSSFile(pathResolver('css/test.css'), pathResolver);
-	test.ok(compiledCSS.length > 0, 'Got compiled CSS');
-	test.ok(!/@import/.test(compiledCSS), 'No imports');
-
-	test.done();
-};
+var js = require('../tasks/lib/javascript');
+var css = require('../tasks/lib/css');
 
 var config = {
-	webroot: path.join(__dirname, 'out'),
-	srcWebroot: __dirname
+	webroot: path.resolve('./test/out'),
+	cwd: path.resolve('./test/out'),
+	srcWebroot: path.resolve('./test'),
+	minify: true,
+	force: true
 };
 
 exports.testGrunt = {
 	css: function(test) {
-		var payload = {
-			src: pathResolver('css'),
-			dest: pathResolver('out/css')
-		};
-		var catalog = frontend.compileCSS(payload, config);
-		// var catalog = grunt.helper('frontend-css', payload, config);
+		var catalog = {};
+		var files = grunt.task.normalizeMultiTaskFiles({
+			src: 'test/css/*.css',
+			dest: 'test/out/css'
+		});
 
-		test.ok(catalog, 'CSS compiled successfully');
+		css.compile(files, config, catalog, {grunt: grunt, task: grunt.task});
+
+		test.ok(Object.keys(catalog).length, 'CSS compiled successfully');
 		test.ok('/css/test-utf.css' in catalog, 'Has test-utf.css');
 		test.ok('/css/test.css' in catalog, 'Has test.css');
 
 		test.done();
 	},
 
-	cssSingle: function(test) {
-		var payload = {};
-		payload[pathResolver('out/css/single.css')] = pathResolver('css/test-utf.css');
-
-		var catalog = frontend.compileCSSFile(payload, config);
-		// var catalog = grunt.helper('frontend-css-file', payload, config);
-
-		test.ok(catalog, 'Single CSS compiled successfully');
-		test.ok('/css/single.css' in catalog, 'Has single.css');
-
-		test.done();	
-	},
-
 	js: function(test) {
-		var payload = {
+		var catalog = {};
+		var files = grunt.task.normalizeMultiTaskFiles({
 			files: {
 				'test/out/js/f.js': [
 					'test/js/file1.js',
 					'test/js/file2.js'
 				]
 			}
-		};
+		});
 
-		var catalog = frontend.compileJS(payload, config);
-		// var catalog = grunt.helper('frontend-js', payload, config);
 
-		test.ok(catalog, 'JS compiled successfully');
+		js.compile(files, config, catalog, {grunt: grunt, task: grunt.task});
+
+		test.ok(Object.keys(catalog).length, 'JS compiled successfully');
 		test.ok('/js/f.js' in catalog, 'Has f.js');
 		
 		test.done();

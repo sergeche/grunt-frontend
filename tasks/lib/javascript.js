@@ -41,7 +41,7 @@ module.exports = {
 			mangle: {},
 			beautify: false,
 			report: false
-		}, env.task.options(config.uglify));
+		}, env.task.options(config.uglify || {}));
 	},
 
 	/**
@@ -81,8 +81,17 @@ module.exports = {
 				return false;
 			}
 
-			var uglified = uglify.minify(_.pluck(src, '_path'), dest.absPath, uglifyConfig);
-			dest.content = uglified.code;
+			if (config.minify) {
+				grunt.verbose.writeln('Minifying JS files');
+				var uglified = uglify.minify(_.pluck(src, '_path'), dest.absPath, uglifyConfig);
+				dest.content = uglified.code;
+			} else {
+				dest.content = _.pluck(src, '_path')
+					.map(function(src) {
+						return grunt.file.read(src);
+					})
+					.join('');
+			}
 
 			if (config.postProcess) {
 				dest.content = config.postProcess(dest.content, dest);
