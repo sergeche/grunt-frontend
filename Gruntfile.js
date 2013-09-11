@@ -49,6 +49,12 @@ module.exports = function(grunt) {
 						'test/js/file2.js'
 					]
 				}
+			},
+			multi: {
+				src: ['**/*.js'],
+				dest: 'out/js/multi',
+				cwd: 'test/js',
+				expand: true
 			}
 		},
 
@@ -60,7 +66,7 @@ module.exports = function(grunt) {
 					minify: true
 				},
 				files: [
-					{src: 'test/css/*.css', dest: 'out/css'}
+					{src: '*.css', cwd: 'test/css', expand: true, dest: 'out/css'}
 				]
 			}
 		},

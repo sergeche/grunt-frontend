@@ -59,34 +59,40 @@ module.exports = {
 		var that = this;
 
 		files.forEach(function(f) {
-			var destPath = f.dest;
-			if (grunt.file.isFile(destPath)) {
-				destPath = path.dirname(destPath);
+			var file = utils.fileInfo(f.dest, config);
+			grunt.log.writeln('Processing ' + file.catalogPath.cyan);
+			var src = f.src.map(function(src) {
+				return utils.fileInfo(src, {cwd: config.srcWebroot});
+			});
+
+			file.content = src.map(function(src) {
+				return that.processFile(src, config, catalog, env).content;
+			}).join('');
+			
+			if (
+				!config.force 
+				&& file.catalogPath in catalog 
+				&& catalog[file.catalogPath].hash === file.hash 
+				&& fs.existsSync(file.absPath)) {
+					grunt.log.writeln('File is not modified, skipping');
+					return;
 			}
 
-			grunt.file.mkdir(destPath);
-
-			f.src.forEach(function(src) {
-				var file = that.processFile(src, config, catalog, env);
-				if (
-					!config.force 
-					&& file.catalogPath in catalog 
-					&& catalog[file.catalogPath].hash === file.hash 
-					&& fs.existsSync(file.absPath)) {
-						grunt.log.writeln('File is not modified, skipping');
-						return;
-				}
-
-				// save result
-				var outFile = utils.fileInfo(path.join(destPath, path.basename(file.absPath)), config);
-				grunt.log.writeln('Saving ' + outFile.catalogPath.cyan);
-				grunt.file.write(outFile.absPath, file.content);
-				catalog[outFile.catalogPath] = {
-					hash: file.hash,
-					date: utils.timestamp(),
-					versioned: utils.versionedUrl(outFile.catalogPath, file.hash, config)
-				};
-			});
+			// save result
+			grunt.log.writeln('Saving ' + file.catalogPath.cyan);
+			grunt.file.write(file.absPath, file.content);
+			catalog[file.catalogPath] = {
+				hash: file.hash,
+				date: utils.timestamp(),
+				versioned: file.versionedUrl(config),
+				files: src.map(function(f) {
+					return {
+						file: f.catalogPath,
+						hash: f.hash,
+						versioned: f.versionedUrl(config)
+					};
+				})
+			};
 		});
 	},
 

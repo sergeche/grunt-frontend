@@ -25,6 +25,22 @@ function shouldProcess(dest, deps, config, catalog) {
 	return false;
 }
 
+function validFiles(files, grunt, config) {
+	var options = {cwd: config.srcWebroot};
+	return files.filter(function(filepath) {
+			// Warn on and remove invalid source files
+			var exists = grunt.file.exists(filepath);
+			if (!exists) {
+				grunt.log.warn('Source file ' + filepath.red + ' not found.');
+			}
+
+			return exists;
+		})
+		.map(function(f) {
+			return utils.fileInfo(f, options)
+		});
+}
+
 module.exports = {
 	/**
 	 * Returns config for UglifyJS
@@ -58,20 +74,7 @@ module.exports = {
 		var _ = grunt.util._;
 
 		files.forEach(function(f) {
-			var src = f.src
-				.filter(function(filepath) {
-					// Warn on and remove invalid source files
-					var exists = grunt.file.exists(filepath);
-					if (!exists) {
-						grunt.log.warn('Source file ' + filepath.red + ' not found.');
-					}
-
-					return exists;
-				})
-				.map(function(f) {
-					return utils.fileInfo(f, {cwd: config.srcWebroot})
-				});
-
+			var src = validFiles(f.src, grunt, config);
 			var dest = utils.fileInfo(f.dest, config);
 			grunt.log.writeln('Processing ' + dest.catalogPath.cyan);
 

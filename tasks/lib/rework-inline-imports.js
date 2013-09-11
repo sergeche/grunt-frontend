@@ -3,7 +3,7 @@
  */
 var path = require('path');
 var fs = require('fs');
-var reExternal = /^\w+\:\/\//;
+var reExternal = /^(\w+\:)?\/\//;
 var rework = require('rework');
 
 function read(file) {
