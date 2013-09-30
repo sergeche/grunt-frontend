@@ -1,5 +1,6 @@
 var fs = require('fs');
 var path = require('path');
+var crypto = require('crypto');
 var crc32 = require('./crc32');
 var _ = require('underscore');
 
@@ -72,7 +73,7 @@ module.exports = {
 	 * @return {String}
 	 */
 	md5: function(content) {
-		return crypto.createHash('md5').update(str).digest('');
+		return crypto.createHash('md5').update(content).digest('');
 	},
 
 	/**
@@ -156,7 +157,9 @@ module.exports = {
 	 * @return {String}
 	 */
 	versionedUrl: function(url, version, config) {
-		if (!config.rewriteScheme) return url;
+		if (!config.rewriteScheme) {
+			return url;
+		}
 
 		var basename = path.basename(url);
 		var ext = path.extname(url).substr(1);

@@ -37,7 +37,7 @@ function validFiles(files, grunt, config) {
 			return exists;
 		})
 		.map(function(f) {
-			return utils.fileInfo(f, options)
+			return utils.fileInfo(f, options);
 		});
 }
 

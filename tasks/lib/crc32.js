@@ -1,26 +1,3 @@
-/**
- * Calculates the CRC32 checksum of a string.
- *
- * @param {Buffer} str
- * @param {Boolean} hex
- * @return {String} checksum
- * @api public
- */
-module.exports = function(buf, hex) {
-	var crc = ~0, i;
-
-	if (!Buffer.isBuffer(buf)) {
-		buf = new Buffer(buf);
-	}
-
-	for (i = 0, l = buf.length; i < l; i++) {
-		crc = (crc >>> 8) ^ crc32tab[(crc ^ buf[i]) & 0xff];
-	}
-
-	crc = Math.abs(crc ^ -1);
-	return hex ? crc.toString(16) : crc;
-};
-
 var crc32tab = [
 	0x00000000, 0x77073096, 0xee0e612c, 0x990951ba,
 	0x076dc419, 0x706af48f, 0xe963a535, 0x9e6495a3,
@@ -87,3 +64,25 @@ var crc32tab = [
 	0xb3667a2e, 0xc4614ab8, 0x5d681b02, 0x2a6f2b94,
 	0xb40bbe37, 0xc30c8ea1, 0x5a05df1b, 0x2d02ef8d
 ];
+
+/**
+ * Calculates the CRC32 checksum of a string.
+ *
+ * @param {Buffer} str
+ * @param {Boolean} hex
+ * @return {String} checksum
+ * @api public
+ */
+module.exports = function(buf, hex) {
+	if (!Buffer.isBuffer(buf)) {
+		buf = new Buffer(buf);
+	}
+
+	var crc = ~0;
+	for (var i = 0, l = buf.length; i < l; i++) {
+		crc = (crc >>> 8) ^ crc32tab[(crc ^ buf[i]) & 0xff];
+	}
+
+	crc = Math.abs(crc ^ -1);
+	return hex ? crc.toString(16) : crc;
+};

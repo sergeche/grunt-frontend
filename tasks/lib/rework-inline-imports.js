@@ -19,23 +19,10 @@ function defaultResolver(root, file, parentFile) {
 	return path.join(root, file.replace(/^\/+/, ''));
 }
 
-function resolveImports(style, resolve, imported, keep) {
-	imported = imported || [];
-	keep = keep || [];
-
-	var rules = [];
-	style.rules.forEach(function(rule) {
-		if (rule.type == 'import') {
-			var processed = processImport(rule, style, resolve, imported, keep);
-			if (processed) {
-				rules = rules.concat(processed);
-			}
-		} else {
-			rules.push(rule);
-		}
-	});
-
-	return rules;
+function stripURL(url) {
+	return url.trim()
+		.replace(/^url\(|\)\;?$/g, '')
+		.replace(/^['"]|['"]$/g, '');
 }
 
 function processImport(rule, style, resolve, imported, keep) {
@@ -66,10 +53,23 @@ function processImport(rule, style, resolve, imported, keep) {
 	return rules;
 }
 
-function stripURL(url) {
-	return url.trim()
-		.replace(/^url\(|\)\;?$/g, '')
-		.replace(/^['"]|['"]$/g, '');
+function resolveImports(style, resolve, imported, keep) {
+	imported = imported || [];
+	keep = keep || [];
+
+	var rules = [];
+	style.rules.forEach(function(rule) {
+		if (rule.type == 'import') {
+			var processed = processImport(rule, style, resolve, imported, keep);
+			if (processed) {
+				rules = rules.concat(processed);
+			}
+		} else {
+			rules.push(rule);
+		}
+	});
+
+	return rules;
 }
 
 module.exports = function(pathResolver, url, imported) {

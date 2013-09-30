@@ -17,8 +17,10 @@ exports.testGrunt = {
 	css: function(test) {
 		var catalog = {};
 		var files = grunt.task.normalizeMultiTaskFiles({
-			src: 'test/css/*.css',
-			dest: 'test/out/css'
+			src: ['test/css/*.css'],
+			dest: 'test/out/css',
+			expand: true,
+			flatten: true
 		});
 
 		css.compile(files, config, catalog, {grunt: grunt, task: grunt.task});
