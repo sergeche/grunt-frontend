@@ -64,7 +64,7 @@ module.exports = {
 
 		files.forEach(function(f) {
 			var file = utils.fileInfo(f.dest, config);
-			grunt.log.writeln('Processing ' + file.catalogPath.cyan);
+			grunt.log.write('Processing ' + file.catalogPath.cyan);
 			var src = f.src.map(function(src) {
 				return utils.fileInfo(src, {cwd: config.srcWebroot});
 			});
@@ -78,12 +78,12 @@ module.exports = {
 				&& file.catalogPath in catalog 
 				&& catalog[file.catalogPath].hash === file.hash 
 				&& fs.existsSync(file.absPath)) {
-					grunt.log.writeln('File is not modified, skipping');
+					grunt.log.writeln(' [skip]'.grey);
 					return;
 			}
 
 			// save result
-			grunt.log.writeln('Saving ' + file.catalogPath.cyan);
+			grunt.log.writeln(' [save]'.green);
 			grunt.file.write(file.absPath, file.content);
 			catalog[file.catalogPath] = {
 				hash: file.hash,
@@ -108,6 +108,8 @@ module.exports = {
 		var grunt = env.grunt;
 		var imported = [];
 		var style = rework(inlineImports.read(file.absPath));
+
+		grunt.verbose.writeln('');
 
 		if (config.inline) {
 			grunt.verbose.writeln('Inlining ' + file.catalogPath.cyan);

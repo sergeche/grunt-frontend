@@ -39,7 +39,6 @@ module.exports = function(grunt) {
 
 		'frontend-js': {
 			options: {
-				force: true,
 				minify: true
 			},
 			main: {

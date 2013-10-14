@@ -76,14 +76,15 @@ module.exports = {
 		files.forEach(function(f) {
 			var src = validFiles(f.src, grunt, config);
 			var dest = utils.fileInfo(f.dest, config);
-			grunt.log.writeln('Processing ' + dest.catalogPath.cyan);
+			grunt.log.write('Processing ' + dest.catalogPath.cyan);
 
 			// check if current file should be compiled
 			if (!shouldProcess(dest, src, config, catalog)) {
-				grunt.log.writeln('File is not modified, skipping\n');
+				grunt.log.writeln(' [skip]'.grey);
 				return false;
 			}
 
+			grunt.verbose.writeln('');
 			if (config.minify) {
 				grunt.verbose.writeln('Minifying JS files');
 				var uglified = uglify.minify(_.pluck(src, '_path'), dest.absPath, uglifyConfig);
@@ -103,7 +104,7 @@ module.exports = {
 			grunt.file.write(dest.absPath, dest.content);
 
 			// Otherwise, print a success message....
-			grunt.log.writeln('File ' + dest.catalogPath.cyan + ' created.');
+			grunt.log.writeln(' [save]'.green);
 
 			// update catalog entry
 			catalog[dest.catalogPath] = {
