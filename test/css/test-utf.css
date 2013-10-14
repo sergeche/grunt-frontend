@@ -15,3 +15,7 @@
 .sample:after {
 	content: url("image.png");
 }
+
+.sample:before {
+	content: url(image.png?12345);
+}

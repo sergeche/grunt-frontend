@@ -28,11 +28,15 @@ function rewriteUrl(url, cssFile, config) {
 		return url;
 	}
 
+	var parts = url.split('?');
+	var cleanUrl = parts.shift();
+	var queryString = parts.length ? '?' + parts.join('?') : '';
+
 	var parentDir = path.dirname(cssFile.absPath), absUrl;
-	if (url.charAt(0) == '/') {
-		absUrl = path.join(config.srcWebroot, url.substr(1));
+	if (cleanUrl.charAt(0) == '/') {
+		absUrl = path.join(config.srcWebroot, cleanUrl.substr(1));
 	} else {
-		absUrl = path.resolve(parentDir, url);
+		absUrl = path.resolve(parentDir, cleanUrl);
 	}
 
 	var f = utils.fileInfo(absUrl, {cwd: config.srcWebroot});
@@ -42,7 +46,7 @@ function rewriteUrl(url, cssFile, config) {
 		return url;
 	}
 
-	return utils.versionedUrl(f.catalogPath, version, config);
+	return utils.versionedUrl(f.catalogPath + queryString, version, config);
 }
 
 module.exports = {
