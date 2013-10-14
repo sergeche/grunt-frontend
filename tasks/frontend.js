@@ -41,9 +41,12 @@ module.exports = function(grunt) {
 				obj.versioned = file.versionedUrl(config);
 			};
 
+			var totalFiles = 0;
 			env.task.files.forEach(function(f) {
 				f.src.forEach(add);
+				totalFiles += f.src.length;
 			});
+			env.grunt.log.writeln('Indexed ' + (totalFiles + env.grunt.util.pluralize(totalFiles, ' file/ files')).cyan);
 		})
 	);
 };
