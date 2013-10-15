@@ -74,6 +74,16 @@ module.exports = function(grunt) {
 			main: {
 				files: [{src: 'test/css/**/*.css'}]
 			}
+		},
+
+		'frontend-update': {
+			main: {
+				options: {
+					merge: false
+				},
+				match: /_utf.css/,
+				src: ['out/css/*.css']
+			}
 		}
 	});
 

@@ -49,4 +49,48 @@ module.exports = function(grunt) {
 			env.grunt.log.writeln('Indexed ' + (totalFiles + env.grunt.util.pluralize(totalFiles, ' file/ files')).cyan);
 		})
 	);
+
+	grunt.registerMultiTask('frontend-update', 'Updates catalog entries with given options', 
+		factory(function(config, map, env) {
+			var grunt = env.grunt;
+			var task = env.task;
+			var data = task.data;
+			var _ = grunt.util._;
+
+			if (!data.match) {
+				grunt.fail.fatal('The "match" option should be specified');
+			}
+
+			var m = data.match;
+			var files = [];
+			task.files.forEach(function(f) {
+				f.src.forEach(function(src) {
+					src = utils.fileInfo(src, config);
+					files.push({
+						file: src.catalogPath,
+						hash: src.hash,
+						versioned: src.versionedUrl(config)
+					});
+				});
+			});
+
+			var matchFn = m instanceof RegExp 
+				? function(key) {return m.test(key);}
+				: function(key) {return key == m;}
+
+			console.log(files);
+
+			Object.keys(map).forEach(function(k) {
+				if (matchFn(k)) {
+					grunt.log.writeln('Updating ' + k.cyan);
+					var _files = files;
+					if (config.merge) {
+						_files = (map[k].files || []).concat(_files);
+					}
+
+					map[k].files = _files;
+				}
+			});
+		})
+	);
 };
