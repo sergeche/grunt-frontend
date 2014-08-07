@@ -3,6 +3,7 @@ var path = require('path');
 var crypto = require('crypto');
 var crc32 = require('./crc32');
 var _ = require('underscore');
+var filter = require('./hash-filter');
 
 function padNumber(num) {
 	return (num < 10 ? '0' : '') + num;
@@ -39,7 +40,7 @@ FileInfo.prototype = {
 
 	get hash() {
 		if (this._hash === null && this.content !== null) {
-			this._hash = module.exports.crc32(this.content);
+			this._hash = filter(module.exports.crc32(this.content));
 		}
 
 		return this._hash;
