@@ -1,4 +1,5 @@
 var fs = require('fs');
+var path = require('path');
 var utils = require('./utils');
 var catalog = require('./catalog');
 var uglify = require('uglify-js');
@@ -21,21 +22,24 @@ function shouldProcess(dest, deps, config, catalog) {
 			return true;
 		}
 	}
-	
+
 	return false;
 }
 
 function validFiles(files, grunt, config) {
-	var options = {cwd: config.srcWebroot};
+	var options = {
+		cwd: config.srcWebroot,
+		targetdir: config.targetdir || '.'
+	};
 	return files.filter(function(filepath) {
-			// Warn on and remove invalid source files
-			var exists = grunt.file.exists(filepath);
-			if (!exists) {
-				grunt.log.warn('Source file ' + filepath.red + ' not found.');
-			}
+		// Warn on and remove invalid source files
+		var exists = grunt.file.exists(filepath);
+		if (!exists) {
+			grunt.log.warn('Source file ' + filepath.red + ' not found.');
+		}
 
-			return exists;
-		})
+		return exists;
+	})
 		.map(function(f) {
 			return utils.fileInfo(f, options);
 		});
@@ -87,8 +91,12 @@ module.exports = {
 			grunt.verbose.writeln('');
 			if (config.minify) {
 				grunt.verbose.writeln('Minifying JS files');
-				var uglified = uglify.minify(_.pluck(src, '_path'), dest.absPath, uglifyConfig);
+				if (config.sourceMap) {
+					uglifyConfig.outSourceMap = path.basename(dest.catalogPath) + '.map';
+				}
+				var uglified = uglify.minify(_.pluck(src, '_path'), uglifyConfig);
 				dest.content = uglified.code;
+				dest.map = uglified.map;
 			} else {
 				dest.content = _.pluck(src, '_path')
 					.map(function(src) {
@@ -101,10 +109,15 @@ module.exports = {
 				dest.content = config.postProcess(dest.content, dest);
 			}
 
-			grunt.file.write(dest.absPath, dest.content);
-
-			// Otherwise, print a success message....
-			grunt.log.writeln(' [save]'.green);
+			if (!config.onlyCatalog) {
+				grunt.file.write(dest.targetPath, dest.content);
+				if (dest.map) {
+					grunt.file.write(dest.targetPath + '.map', dest.map);
+				}
+				grunt.log.writeln(' [save]'.green);
+			} else {
+				grunt.log.writeln('');
+			}
 
 			// update catalog entry
 			catalog[dest.catalogPath] = {

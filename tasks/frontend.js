@@ -9,7 +9,7 @@ module.exports = function(grunt) {
 	function factory(fn) {
 		return function() {
 			var config = utils.config(grunt, this);
-			var map = catalog.load();
+			var map = catalog.load(config);
 			fn(config, map, {grunt: grunt, task: this});
 			catalog.save(map);
 		};

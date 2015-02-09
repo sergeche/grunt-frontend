@@ -13,6 +13,7 @@ function FileInfo(file, options) {
 	this._path = file;
 	this.absPath = module.exports.absPath(file, options.cwd);
 	this.catalogPath = module.exports.catalogPath(file, options);
+	this.targetPath = module.exports.absPath(path.join(options.targetdir || '.', file), options.cwd),
 	this._hash = null;
 	this._content = null;
 	this._options = options || {};

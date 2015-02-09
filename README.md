@@ -42,7 +42,13 @@ module.exports = function(grunt) {
            
            // function to post-process file’s content before it will be
            // saved to disk
-           postProcess: function(content, fileInfo) {}
+           postProcess: function(content, fileInfo) {},
+
+           // Directory to output .build-catalog.js and bundles
+           targetdir: '../vat/tmp',
+
+           // Only process .build-catalog.js (no bundles)
+           onlyCatalog: true
     	},
     	
     	// Task for concatenating and minifying JS files
