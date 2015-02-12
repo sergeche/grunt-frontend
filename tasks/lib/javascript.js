@@ -45,6 +45,15 @@ function validFiles(files, grunt, config) {
 		});
 }
 
+function stripSourcePrefix (sourceMap, prefix) {
+	var prefix = new RegExp('^' + prefix);
+	sourceMap = JSON.parse(sourceMap);
+	sourceMap.sources = sourceMap.sources.map(function (path) {
+		return path.replace(prefix, '');
+	});
+	return JSON.stringify(sourceMap);
+}
+
 module.exports = {
 	/**
 	 * Returns config for UglifyJS
@@ -112,6 +121,10 @@ module.exports = {
 			if (!config.onlyCatalog) {
 				grunt.file.write(dest.targetPath, dest.content);
 				if (dest.map) {
+					// strip trailing prefix in source pathes and write file
+					if (config.sourcePrefix) {
+						dest.map = stripSourcePrefix(dest.map, config.sourcePrefix)
+					}
 					grunt.file.write(dest.targetPath + '.map', dest.map);
 				}
 				grunt.log.writeln(' [save]'.green);
