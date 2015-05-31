@@ -11,7 +11,7 @@ module.exports = function(grunt) {
     grunt.initConfig({
     	// Global config for each frontend-* task. These values can
     	// be overridden in `options` key of each task
-    	frontent: {
+    	frontend: {
     		// Force file minification even if they were not modified
            force: false,
         
